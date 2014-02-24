@@ -24,12 +24,10 @@
 
 #define REFRESH_RATE_MS 40
 
-QT_USE_NAMESPACE_SERIALPORT
-
-Q_DECLARE_METATYPE(SerialPort::DataBits)
-Q_DECLARE_METATYPE(SerialPort::StopBits)
-Q_DECLARE_METATYPE(SerialPort::Parity)
-Q_DECLARE_METATYPE(SerialPort::FlowControl)
+Q_DECLARE_METATYPE(QSerialPort::DataBits)
+Q_DECLARE_METATYPE(QSerialPort::StopBits)
+Q_DECLARE_METATYPE(QSerialPort::Parity)
+Q_DECLARE_METATYPE(QSerialPort::FlowControl)
 
 SerialPortWidget::SerialPortWidget(QWidget *parent) :
   QWidget(parent),
@@ -41,44 +39,44 @@ SerialPortWidget::SerialPortWidget(QWidget *parent) :
   ui->setupUi(this);
 
   ui->dataBitsComboBox->addItem(QLatin1String("5"),
-                                SerialPort::Data5);
+                                QSerialPort::Data5);
   ui->dataBitsComboBox->addItem(QLatin1String("6"),
-                                SerialPort::Data6);
+                                QSerialPort::Data6);
   ui->dataBitsComboBox->addItem(QLatin1String("7"),
-                                SerialPort::Data7);
+                                QSerialPort::Data7);
   ui->dataBitsComboBox->addItem(QLatin1String("8"),
-                                SerialPort::Data8);
+                                QSerialPort::Data8);
   ui->dataBitsComboBox->setCurrentIndex(-1);
 
 
   ui->stopBitsComboBox->addItem(QLatin1String("1"),
-                                SerialPort::OneStop);
+                                QSerialPort::OneStop);
   ui->stopBitsComboBox->addItem(QLatin1String("1.5"),
-                                SerialPort::OneAndHalfStop);
+                                QSerialPort::OneAndHalfStop);
   ui->stopBitsComboBox->addItem(QLatin1String("2"),
-                                SerialPort::TwoStop);
+                                QSerialPort::TwoStop);
   ui->stopBitsComboBox->setCurrentIndex(-1);
 
 
   ui->parityComboBox->addItem(QLatin1String("No"),
-                              SerialPort::NoParity);
+                              QSerialPort::NoParity);
   ui->parityComboBox->addItem(QLatin1String("Even"),
-                              SerialPort::EvenParity);
+                              QSerialPort::EvenParity);
   ui->parityComboBox->addItem(QLatin1String("Odd"),
-                              SerialPort::OddParity);
+                              QSerialPort::OddParity);
   ui->parityComboBox->addItem(QLatin1String("Space"),
-                              SerialPort::SpaceParity);
+                              QSerialPort::SpaceParity);
   ui->parityComboBox->addItem(QLatin1String("Mark"),
-                              SerialPort::MarkParity);
+                              QSerialPort::MarkParity);
   ui->parityComboBox->setCurrentIndex(-1);
 
 
   ui->flowControlComboBox->addItem(QLatin1String("No"),
-                                   SerialPort::NoFlowControl);
+                                   QSerialPort::NoFlowControl);
   ui->flowControlComboBox->addItem(QLatin1String("Hardware"),
-                                   SerialPort::HardwareControl);
+                                   QSerialPort::HardwareControl);
   ui->flowControlComboBox->addItem(QLatin1String("Software"),
-                                   SerialPort::SoftwareControl);
+                                   QSerialPort::SoftwareControl);
   ui->flowControlComboBox->setCurrentIndex(-1);
 }
 
@@ -95,11 +93,11 @@ void SerialPortWidget::write(QByteArray data)
 
 void SerialPortWidget::on_getPortsPushButton_clicked()
 {
-  serialPortInfoList = SerialPortInfo::availablePorts();
+  serialPortInfoList = QSerialPortInfo::availablePorts();
 
   ui->portComboBox->clear();
 
-  foreach(SerialPortInfo entry, serialPortInfoList)
+  foreach(QSerialPortInfo entry, serialPortInfoList)
     ui->portComboBox->addItem(entry.portName());
 }
 
@@ -130,7 +128,7 @@ void SerialPortWidget::on_openPortPushButton_clicked()
     ui->parityComboBox->setCurrentIndex(-1);
     ui->flowControlComboBox->setCurrentIndex(-1);
   } else {
-    serialPort = new SerialPort(ui->portComboBox->currentText());
+    serialPort = new QSerialPort(ui->portComboBox->currentText());
 
     if (serialPort->open(QIODevice::ReadWrite)) {
       enableCommunicationSettings();
@@ -201,7 +199,7 @@ void SerialPortWidget::on_portComboBox_currentIndexChanged(int index)
   } else {
     ui->openPortPushButton->setEnabled(true);
 
-    QList<qint32> baudRateList = serialPortInfoList[index].standardRates();
+    QList<qint32> baudRateList = serialPortInfoList[index].standardBaudRates();
 
     ui->baudRateComboBox->clear();
 
@@ -210,19 +208,17 @@ void SerialPortWidget::on_portComboBox_currentIndexChanged(int index)
 
     ui->baudRateComboBox->setCurrentIndex(-1);
 
-    QString vid = serialPortInfoList[index].vendorIdentifier();
-
-    if (vid.isEmpty())
+    if (!serialPortInfoList[index].hasVendorIdentifier())
       ui->vidLabel->setText(QLatin1String("-"));
     else
-      ui->vidLabel->setText(QLatin1String("0x") + vid);
+      ui->vidLabel->setText(QLatin1String("0x") + QString(QByteArray::number(serialPortInfoList[index].vendorIdentifier(), 16)));
 
-    QString pid = serialPortInfoList[index].productIdentifier();
+    quint16 pid = serialPortInfoList[index].productIdentifier();
 
-    if (pid.isEmpty())
+    if (!serialPortInfoList[index].hasProductIdentifier())
       ui->pidLabel->setText(QLatin1String("-"));
     else
-      ui->pidLabel->setText(QLatin1String("0x") + pid);
+      ui->pidLabel->setText(QLatin1String("0x") + QString(QByteArray::number(serialPortInfoList[index].productIdentifier(), 16)));
 
     ui->portStatusLabel->setText(QLatin1String("<font color=red>"
                                                "Closed"
@@ -233,7 +229,7 @@ void SerialPortWidget::on_portComboBox_currentIndexChanged(int index)
 void SerialPortWidget::on_baudRateComboBox_currentIndexChanged(int index)
 {
   if (index != -1 && serialPort != 0) {
-    if(serialPort->setRate(ui->baudRateComboBox->itemData(index).value<int>())) {
+    if(serialPort->setBaudRate(ui->baudRateComboBox->itemData(index).value<int>())) {
       validateCommunicationSettings();
 
       return;
@@ -251,7 +247,7 @@ void SerialPortWidget::on_baudRateComboBox_currentIndexChanged(int index)
 void SerialPortWidget::on_dataBitsComboBox_currentIndexChanged(int index)
 {
   if (index != -1 && serialPort != 0) {
-    if(serialPort->setDataBits(ui->dataBitsComboBox->itemData(index).value<SerialPort::DataBits>())) {
+    if(serialPort->setDataBits(ui->dataBitsComboBox->itemData(index).value<QSerialPort::DataBits>())) {
       validateCommunicationSettings();
 
       return;
@@ -269,7 +265,7 @@ void SerialPortWidget::on_dataBitsComboBox_currentIndexChanged(int index)
 void SerialPortWidget::on_stopBitsComboBox_currentIndexChanged(int index)
 {
   if (index != -1 && serialPort != 0) {
-    if(serialPort->setStopBits(ui->stopBitsComboBox->itemData(index).value<SerialPort::StopBits>())) {
+    if(serialPort->setStopBits(ui->stopBitsComboBox->itemData(index).value<QSerialPort::StopBits>())) {
       validateCommunicationSettings();
 
       return;
@@ -287,7 +283,7 @@ void SerialPortWidget::on_stopBitsComboBox_currentIndexChanged(int index)
 void SerialPortWidget::on_parityComboBox_currentIndexChanged(int index)
 {
   if (index != -1 && serialPort != 0) {
-    if(serialPort->setParity(ui->parityComboBox->itemData(index).value<SerialPort::Parity>())) {
+    if(serialPort->setParity(ui->parityComboBox->itemData(index).value<QSerialPort::Parity>())) {
       validateCommunicationSettings();
 
       return;
@@ -305,7 +301,7 @@ void SerialPortWidget::on_parityComboBox_currentIndexChanged(int index)
 void SerialPortWidget::on_flowControlComboBox_currentIndexChanged(int index)
 {
   if (index != -1 && serialPort != 0) {
-    if(serialPort->setFlowControl(ui->flowControlComboBox->itemData(index).value<SerialPort::FlowControl>())) {
+    if(serialPort->setFlowControl(ui->flowControlComboBox->itemData(index).value<QSerialPort::FlowControl>())) {
       validateCommunicationSettings();
 
       return;
